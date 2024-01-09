@@ -1,0 +1,1003 @@
+---
+title: "SurvToGit"
+author: "Adrian Reuschel"
+date: "2024-01-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+LOAD PACKAGES
+```{r}
+library(dplyr)
+# install.packages("dplyr")
+library(survival)
+library(MASS)
+# update.packages(ask = FALSE, dependencies = TRUE)
+```
+
+DATA Source:
+https://www.sciencedirect.com/science/article/pii/S2352340920301876#appsec2
+
+LOAD DATA
+```{r}
+#NEW DATASET 
+god <- read.csv("/Users/abbyreuschel/Desktop/pls/god.csv")
+```
+
+
+DATA CLEANING
+```{r}
+# #trimming for columns's I want to explore
+beetle <- god %>%
+  select(CellID, Year, MPB, Latitude, Longitude, ColdTolerance, BP1, BP2, BP1red, BP2red, BP1man, BP2man)
+
+#renaming col's
+new_column_names <- c("Group", "Monitoring_Period", "Delta", "Site_Lat", "Site_Long", "Cold_Tolerance", "BP1_Infected_Prev","BP2_Infected_Prev", "BP1_NoTreatment_Prev", "BP2_NoTreatment_Prev", "BP1_Treatment_Prev", "BP2_Treatment_Prev")
+
+
+beetle <- setNames(beetle, new_column_names)
+```
+
+
+
+```{r}
+beetle_tte <- beetle %>%
+  select(Group, Monitoring_Period, Delta, Site_Lat, Site_Long, Cold_Tolerance, BP1_Infected_Prev, BP1_Treatment_Prev, BP2_Infected_Prev, BP2_Treatment_Prev)
+
+#deleting incomplete groups
+beetle_tte <- beetle_tte %>%
+  group_by(Group) %>%
+  filter(all(c(2006:2018) %in% Monitoring_Period)) %>%
+  ungroup()
+
+#making deltas after first 1 to 0
+beetle_tte <- beetle_tte %>%
+  group_by(Group) %>%
+  mutate(Delta = ifelse(row_number() > which.max(Delta == 1), 0, Delta)) %>%
+  ungroup()
+
+#adding Time col
+beetle_tte$Time <- beetle_tte$Monitoring_Period
+
+observation_count <- table(beetle_tte$Monitoring_Period)
+print(observation_count)
+```
+
+Next Steps:
+- Figure out how to use coordinates to delineate "sites"
+    - how big is area covered?
+- Learn about treatment types in this study
+- Read into the area and problems associated with the pine beetle
+- Formulate research question to answer using methods of original paper
+
+(1) ABOUT THE DATA
+Region: Saskatchewan, Western province of Canada
+Location: Cypress Hills
+- inhabited by multiple indigenous groups
+- data collected by Saskatchewan Ministry of Environment Forest Service
+- groups are determined with a 50m radius
+- 2006 outbreak of pine beetles led to this data monitoring
+
+
+
+K-Means Clustering, Spatial Dependence  
+
+```{r}
+library(ggplot2)
+#install.packages("cluster")
+library(cluster)
+```
+
+```{r}
+# subset1 <- beetle_tte %>%
+#   group_by(Group) %>%
+#   arrange(Monitoring_Period) %>%
+#   slice(1) %>%
+#   ungroup()
+
+locations <- beetle_tte[, c("Site_Lat", "Site_Long")]
+set.seed(2023)
+k <- 4
+result <- kmeans(locations, centers = k, nstart = 10)
+
+
+ggplot(beetle_tte, aes(x = Site_Long, y = Site_Lat, color = factor(result$cluster))) +
+  geom_point() +
+  labs(title = "Clusters of Sites")
+```
+
+```{r}
+cluster_counts <- table(result$cluster)
+cluster_counts
+```
+
+Kmeans result:
+4 clusters is the best, each have 5500-6200 observations.
+
+```{r}
+#assign sites to each group
+beetle_tte$Site <- result$cluster
+```
+
+
+Research Question:
+Are the control methods employed on areas of pine beetle infested trees effective in slowing the spread of the pine beetles to a 1 or 2 degree radius?
+
+- Learn about treatment types in this study
+ # cut and burn
+- Read into the area and problems associated with the pine beetle
+ # beetle is about the size of a grain of rice
+ # biggest threat to pine trees in Canada
+ # an outbreak in british columbia killed over 50%  of pine trees
+ # https://www.saskatchewan.ca/residents/environment-public-health-and-safety/saskatchewan-state-of-the-environment-2023/mountain-pine-beetle-detection-and-prevention#:~:text=MPB%20is%20the%20most%20significant,in%20Saskatchewan%20and%20across%20Canada 
+
+
+
+Recreating Methods of Original Paper
+------------------------------------
+Models
+------
+1. Full Model
+- classic coxph model, with monitoring period and site
+
+Survival Model
+```{r}
+# Full model
+library(survival)
+surv_mod <- Surv(beetle_tte$Time, beetle_tte$Delta)
+```
+
+Risk Indicator Function
+```{r}
+# Risk indicator function
+# Y = 1 (subject at ith site in kth monitoring period at risk) or 0 (not at risk)
+
+beetle2 <- beetle_tte[order(beetle_tte$Site, beetle_tte$Monitoring_Period), ]
+
+beetle2 <- beetle2 %>%
+  group_by(Group) %>%
+  mutate(
+    Y_ki = ifelse(row_number() <= which.max(Delta == 1), 1, 0)
+  ) %>%
+  ungroup()
+
+
+# Checking indicator function
+risk_event_table <- beetle2 %>%
+  group_by(Monitoring_Period) %>%
+  summarize(
+    TotalY = sum(Y_ki),
+    TotalEvents = sum(Delta)
+  )
+risk_event_table
+```
+
+Checking Risk Function
+```{r}
+# Check
+# 
+# events_2007 <- beetle2 %>%
+#   filter(Monitoring_Period == 2007, Delta ==1) %>%
+#   select(Group, Delta, Monitoring_Period, Y_ki)
+# events_2007
+# 
+# #look at 884, 1145, 1271 and check that 2006 they had events- all look correct!!
+# #look at 913, 2809, 18893 and check that 2007 they are not considered at risk- all look correct!!
+# 
+# group_884_obs <- beetle2 %>%
+#   filter(Group == 884) %>%
+#   select(Group, Delta, Monitoring_Period, Y_ki)
+# group_884_obs
+# 
+group_18893_obs <- beetle2 %>%
+  filter(Group == 18893) %>%
+  select(Group, Delta, Monitoring_Period, Y_ki)
+group_18893_obs
+# 
+# # Rest of 2007 events to check: 874*, 908*,1165*, 1169*, 1515,1650,1918,2144,2929,18489
+# # * = checked and good!
+# 
+# #its because the events are totaled and are accumulating!! it actually looks correct-- fix the table code if needed.
+
+```
+
+Coxph options
+- A strata term identifies a stratified Cox model; separate baseline hazard functions are fit for each strata.
+
+- A time-transform term allows variables to vary in time. In this case the tt argument will be a function or a list of functions (if there are more than one tt() term in the model) giving the appropriate transform.
+
+Full Model, COXPH... what goes wrong?
+```{r}
+# Full model
+# beetle2$Time <- as.numeric(beetle2$Monitoring_Period)
+# 
+# surv_mod <- Surv(beetle2$Time, beetle2$Delta)
+# 
+# fullmod_data <- data.frame(
+#   SurvObj = surv_mod,
+#   Y_ki = beetle2$Y_ki,
+#   covariate1 = beetle2$BP1_Infected_Prev,
+#   covariate2 = beetle2$BP1_Treatment_Prev,
+#   covariate3 = beetle2$BP2_Infected_Prev,
+#   covariate4 = beetle2$BP2_Treatment_Prev, 
+#   site = as.factor(beetle2$Site),
+#   Time = beetle2$Time
+# )
+# 
+# cox_model <- coxph(SurvObj ~ Y_ki + 
+#                                 tt(covariate1) + 
+#                                 tt(covariate2) + 
+#                                 tt(covariate3) +
+#                                 tt(covariate4) +
+#                                 site +
+#                                 tt(covariate1): tt(covariate2) +
+#                                 tt(covariate3): tt(covariate4) +
+#                                 tt(covariate1): site +
+#                                 tt(covariate2): site +
+#                                 tt(covariate3): site +
+#                                 tt(covariate4): site
+#                    ,data = fullmod_data)
+# 
+# # Graphing and summaries
+# summary(cox_model)
+#Convergence issues in coxph model.. paper says glm() will fix these computational inefficiencies
+```
+-convergence issues
+-non-significant parameters
+
+
+Considering GLM w/ logloglink
+
+"glm function - RDocumentation." Home - RDocumentation, www.rdocumentation.org/packages/stats/versions/3.6.2/topics/glm. Accessed 4 Dec. 2023.
+"Modelling a binary outcome when census interval varies." Cross Validated, stats.stackexchange.com/questions/148699/modelling-a-binary-outcome-when-census-interval-varies/148728#148728. Accessed 4 Dec. 2023.
+
+```{r}
+link_df <- data.frame(
+  SurvObj = surv_mod,
+  Y_ki = beetle2$Y_ki,
+  covariate1 = beetle2$BP1_Infected_Prev,
+  covariate2 = beetle2$BP1_Treatment_Prev,
+  covariate3 = beetle2$BP2_Infected_Prev,
+  covariate4 = beetle2$BP2_Treatment_Prev, 
+  site = as.factor(beetle2$Site),
+  Time = beetle2$Time,
+  event = as.numeric(beetle2$Delta)
+)
+
+#baseline mod
+link_base <- glm(event ~ Time, family = binomial(link = 'cloglog'), data = link_df)
+summary(link_base)
+
+#full mod
+link_full <- glm(event ~ offset(Y_ki) +
+                        Time +
+                        covariate1:Time + 
+                        covariate2:Time + 
+                        covariate3:Time + 
+                        covariate4:Time + 
+                        (covariate1:Time):(covariate2:Time) + 
+                        (covariate3:Time):(covariate4:Time) + 
+                        site +
+                        covariate1:site + 
+                        covariate2:site + 
+                        covariate3:site + 
+                        covariate4:site
+                        ,
+                 family = binomial(link = 'cloglog'), data = link_df)
+
+summary(link_full)
+```
+
+GLM Model Selection
+```{r}
+#using AIC
+library(MASS)
+aic_full <- stepAIC(link_full, direction = "backward")
+#same result
+full_final <- glm(event ~ Time + site + 
+                    Time:covariate1 + Time:covariate2 + Time:covariate3 + Time:covariate4 + 
+                    (covariate1:Time):(covariate2:Time) + 
+                        (covariate3:Time):(covariate4:Time) +  
+                    covariate1:site + covariate2:site + covariate3:site + covariate4:site + 
+                    offset(Y_ki),
+    family = binomial(link = 'cloglog'),
+    data = link_df)
+summary(full_final)
+```
+Model selected after AIC:
+
+event ~ Time + site + Time:covariate1 + Time:covariate2 + 
+    Time:covariate3 + Time:covariate4 + (covariate1:Time):(covariate2:Time) + 
+    (covariate3:Time):(covariate4:Time) + covariate1:site + covariate2:site + 
+    covariate3:site + covariate4:site + offset(Y_ki)
+
+AIC = 12965
+
+
+Checking assumptions for model (1)
+- goodness of fit
+- Check residuals
+```{r}
+anova(link_base, full_final, test ="Chisq")
+#test shows that model significantly improves 
+link_base$aic
+full_final$aic
+link_base$aic - full_final$aic
+#lowered aic by 3549.653
+```
+
+```{r}
+#deviance residuals
+dev_residuals1 <- residuals(full_final, type = 'deviance')
+
+plot(link_df$Time, dev_residuals1,
+     type = 'b', pch = 10, 
+     xlab = "Time", ylab = "Deviance Residuals",
+     main = "Deviance Residuals for GLM Model 1")
+```
+
+```{r}
+
+#checking for outliers because of deviance plot
+plot(link_df$Time, dev_residuals1,
+     type = 'b',
+     xlab = 'time', ylab = 'dev residuals',
+     main = "Mod1: Residuals with Outliers")
+
+points(link_df$Time[outliers1], dev_residuals1[outliers1], pch = 18, col = 'red')
+
+outliers1 <- which(dev_residuals1 > 3 | dev_residuals1 < -3)
+outlier_sites1 <- link_df$site[outliers1]
+print(outlier_sites1)
+#get a table
+site_counts <- table(link_df$site[outliers1])
+site_counts
+```
+-only one outlier in site 2 (furthest west)
+
+What happens when I remove outliers??
+```{r}
+#full mod, no outliers
+link_df_no_outliers <- link_df[-outliers1, ]
+
+
+link_outliers <- glm(event ~ offset(Y_ki) +
+                        Time +
+                        covariate1:Time + 
+                        covariate2:Time + 
+                        covariate3:Time + 
+                        covariate4:Time + 
+                        (covariate1:Time):(covariate2:Time) + 
+                        (covariate3:Time):(covariate4:Time) + 
+                        site +
+                        covariate1:site + 
+                        covariate2:site + 
+                        covariate3:site + 
+                        covariate4:site
+                        ,
+                 family = binomial(link = 'cloglog'), data = link_df_no_outliers)
+
+summary(link_outliers)
+```
+-estimates are much better
+
+Model selection without outliers
+```{r}
+aic_outliers <- stepAIC(link_outliers, direction = "backward")
+#
+full_final_no_outliers <- glm(event ~ Time + site + 
+                                Time:covariate1 + Time:covariate3 + Time:covariate4 + 
+                                (covariate1:Time):(covariate2:Time) + 
+                        (covariate3:Time):(covariate4:Time) +  
+                                covariate1:site + covariate2:site + covariate3:site + covariate4:site + 
+                                offset(Y_ki),
+                              family = binomial(link = "cloglog"), data = link_df_no_outliers)
+summary(full_final_no_outliers)
+
+```
+Best model from outlier-free mod:
+
+event ~ Time + site + Time:covariate1 + Time:covariate3 + 
+    Time:covariate4 + covariate1:covariate2 + covariate3:covariate4 + 
+    covariate1:site + covariate2:site + covariate3:site + covariate4:site + 
+    offset(Y_ki)
+    
+AIC = 8447.7
+- the first step of the model selection process removed the same variable
+- only 2 units less than before model selection
+
+```{r}
+#comparing AIC's
+#base model
+link_base$aic
+#full model
+link_full$aic
+#final with outliers
+full_final$aic
+#final without outliers
+full_final_no_outliers$aic
+```
+```{r}
+#Model 1 interpretations:
+summary(full_final)
+```
+- in this model, the predictor that increases log-odds of individual at ith site in kth monitoring period getting infested by bark beetles is the individual being at site 2.
+- investigate site 2 to draw more conclusions about this... did site 2 have most events?
+- other significant predictors of log odds were:
+    site3                  4.701e-01  1.116e-01   4.213 2.52e-05 ***
+    site4                  2.953e-01  1.175e-01   2.514 0.011938 *  
+    Time:covariate1        7.866e-04  8.131e-05   9.674  < 2e-16 ***
+    Time:covariate3        5.037e-04  7.607e-05   6.622 3.54e-11 ***
+    Time:covariate4        4.104e-04  1.412e-04   2.906 0.003662 ** 
+    Time:(covariate1:covariate2) -2.160e-04  4.013e-05  -5.382 7.36e-08 ***  This says the treatment is somewhat mitigating prob
+    Time:(covariate3:covariate4) -1.284e-04  1.695e-05  -7.578 3.51e-14 ***  mitigating, but less sig than 1 deg radius
+    site2:covariate1      -1.134e+00  1.791e-01  -6.334 2.39e-10 *** impact of cov 1 decreasing over time
+    site3:covariate1      -6.462e-01  2.112e-01  -3.060 0.002214 **  impact of cov 1 decreasing over time
+    site2:covariate2       9.058e-01  1.771e-01   5.116 3.12e-07 *** impact of cov 2 increasing over time
+    site3:covariate2       7.980e-01  2.592e-01   3.079 0.002078 **  impact of cov 2 increasing over time
+    site2:covariate3      -5.287e-01  1.605e-01  -3.294 0.000989 *** impact of cov 3 decreasing over time
+for each unit increase in infected trees in a previous year (1deg rad), the effect of treatment trees during the prev year decreases the log odds of the event happening by -4.243e-01
+
+
+Likelihood Ratio for Hypothesis
+```{r}
+#model without treatment covariates
+lrt_red1 <- glm(event ~ Time + site + 
+                    Time:covariate1 + Time:covariate3 + 
+                    covariate1:site + covariate3:site +
+                    offset(Y_ki),
+    family = binomial(link = 'cloglog'),
+    data = link_df)
+#model with treatment covariates
+lrt_full1 <- glm(event ~ Time + site + 
+                    Time:covariate1 + Time:covariate2 + Time:covariate3 + Time:covariate4 + 
+                    (covariate1:Time):(covariate2:Time) + 
+                        (covariate3:Time):(covariate4:Time) +  
+                    covariate1:site + covariate2:site + covariate3:site + covariate4:site + 
+                    offset(Y_ki),
+    family = binomial(link = 'cloglog'),
+    data = link_df)
+#chisq test
+lrt1 <- anova(lrt_red1, lrt_full1, test = "Chisq")
+lrt1
+```
+- LRT shows including treatment predictors improves the model performance
+
+
+
+
+
+Reduced Models
+---------------
+2. Reduced Mod 1
+- constant Beta
+
+COXPH reduced mod 1... what goes wrong? doesn't converge
+- homogeneous beta, heterogeneous Z vector
+
+
+
+GLM Reduced mod 1
+```{r}
+link_df <- data.frame(
+  SurvObj = surv_mod,
+  Y_ki = beetle2$Y_ki,
+  covariate1 = beetle2$BP1_Infected_Prev,
+  covariate2 = beetle2$BP1_Treatment_Prev,
+  covariate3 = beetle2$BP2_Infected_Prev,
+  covariate4 = beetle2$BP2_Treatment_Prev, 
+  site = as.factor(beetle2$Site),
+  Time = beetle2$Time,
+  event = beetle2$Delta
+)
+
+#reduced mod 1
+link_red1 <- glm(event ~ Time + 
+                        offset(Y_ki) + 
+                        covariate1 + 
+                        covariate2 + 
+                        covariate3 + 
+                        covariate4 + 
+                        covariate1:covariate2 + 
+                        covariate3:covariate4 + 
+                        site +
+                        covariate1:site + 
+                        covariate2:site + 
+                        covariate3:site + 
+                        covariate4:site
+                        ,
+                 family = binomial(link = 'cloglog'), data = link_df)
+summary(link_red1)
+```
+Model Selection GLM reduced 1
+```{r}
+#using AIC backward
+aic_red1 <- stepAIC(link_red1, direction = "backward")
+```
+Reduced model after selection
+```{r}
+link_red1final <- glm(event ~ Time + offset(Y_ki) + covariate1 + covariate2 + covariate3 + 
+    covariate4 + covariate1:covariate2 + covariate3:covariate4 + 
+    site + covariate1:site + covariate2:site + covariate3:site + 
+    covariate4:site,
+    family = "binomial"(link= 'cloglog'), data = link_df)
+summary(link_red1final)
+```
+
+Checking COXph assumptions for model (2)
+- proportionality
+- LRT for goodness of fit
+- Check residuals
+
+```{r}
+#deviance residuals
+dev_residuals2 <- residuals(link_red1final, type = 'deviance')
+
+plot(link_df$Time, dev_residuals2,
+     type = 'b', pch = 10, 
+     xlab = "Time", ylab = "Deviance Residuals",
+     main = "Deviance Residuals for GLM Model 2")
+```
+```{r}
+#these outliers are the same
+plot(link_df$Time, dev_residuals2,
+     type = 'b',
+     xlab = 'time', ylab = 'dev residuals',
+     main = "Mod1: Residuals with Outliers")
+
+points(link_df$Time[outliers1], dev_residuals1[outliers1], pch = 18, col = 'red')
+
+outliers2 <- which(dev_residuals2 > 3 | dev_residuals2 < -3)
+outlier_sites2 <- link_df$site[outliers2]
+print(outlier_sites2)
+#get a table
+site_counts2 <- table(link_df$site[outliers2])
+site_counts2
+```
+
+Reduced mod 1 no outliers
+```{r}
+#red mod1, no outliers
+link_df_no_outliers2 <- link_df[-outliers2, ]
+
+
+link_outliers2 <- glm(event ~ offset(Y_ki) +
+                        Time +
+                        covariate1 + 
+                        covariate2 + 
+                        covariate3 + 
+                        covariate4 + 
+                        covariate1:covariate2 + 
+                        covariate3:covariate4 + 
+                        site +
+                        covariate1:site + 
+                        covariate2:site + 
+                        covariate3:site + 
+                        covariate4:site
+                        ,
+                 family = binomial(link = 'cloglog'), data = link_df_no_outliers2)
+
+summary(link_outliers2)
+```
+Model selection without outliers
+```{r}
+aic_outliers2 <- stepAIC(link_outliers2, direction= 'backward')
+```
+red mod1 w/o outliers final:
+```{r}
+link_red1final_no_outliers <- glm(event ~ Time + covariate1 + covariate2 + covariate3 + covariate4 + 
+    site + covariate1:covariate2 + covariate3:covariate4 + covariate1:site + 
+    covariate3:site + covariate4:site + offset(Y_ki),
+    family = "binomial"(link = "cloglog"), data = link_df_no_outliers2)
+summary(link_red1final_no_outliers)
+```
+
+Checking AIC's:
+```{r}
+#base
+link_base$aic
+#full final
+full_final$aic
+#full no outliers
+full_final_no_outliers$aic
+#red mod1 final
+link_red1final$aic
+#red mod1 final no outliers
+link_red1final_no_outliers$aic
+```
+
+- reduced model barely lower AIC, still lower though
+
+Mod red1 interpretations
+```{r}
+summary(link_red1final)
+```
+The parameter that most impacted log-odds of beetle infestation in this model was covariate 1 which is the num of infested tree cells in 1 cell radius. covariate1..    for unit increase in num infested trees, the log odds of an individual experiencing the event increases by 1.560958   (< 2e-16 ***).
+Other significant parameters:
+    covariate3             1.015004   0.152727   6.646 3.01e-11 *** increase in infected... increase in log odds
+    covariate4             0.832855   0.282492   2.948 0.003196 **  increase of treatment (2deg) also increase in log odds
+    site2                  1.146065   0.101592  11.281  < 2e-16 *** site 2 most diff from site 1
+    site3                  0.471928   0.111661   4.226 2.37e-05 ***
+    site4                  0.297341   0.117517   2.530 0.011400 *  
+    covariate1:covariate2 -0.434844   0.080750  -5.385 7.24e-08 *** cov 2 decreases cov 1 impact (evidence for hypothesis) 
+    covariate3:covariate4 -0.258518   0.034099  -7.581 3.42e-14 *** same thing here just lesser degree
+    covariate1:site2      -1.110107   0.194359  -5.712 1.12e-08 ***
+    covariate1:site3      -0.622361   0.223265  -2.788 0.005311 ** 
+    covariate2:site2       0.770139   0.387065   1.990 0.046625 *  
+    covariate3:site2      -0.530832   0.160221  -3.313 0.000923 ***
+
+Likelihood Ratio for Hypothesis
+```{r}
+#model without treatment covariates
+lrt_red2 <- glm(event ~ Time + offset(Y_ki) + covariate1 + covariate3 + 
+    site + covariate1:site + covariate3:site,
+    family = binomial(link = 'cloglog'),
+    data = link_df)
+#model with treatment covariates
+lrt_full2 <- glm(event ~ Time + offset(Y_ki) + covariate1 + covariate2 + covariate3 + 
+    covariate4 + covariate1:covariate2 + covariate3:covariate4 + 
+    site + covariate1:site + covariate2:site + covariate3:site + 
+    covariate4:site,
+    family = "binomial"(link= 'cloglog'), data = link_df)
+#LRT
+lrt2 <- anova(lrt_red2, lrt_full2, test = "Chisq")
+lrt2
+```
+- LRT test on reduced model 2 shows addition of treatment parameters improves model 
+
+
+
+3. Reduced Mod 2
+- stratify surv function on site and monitoring period
+- groupedsurv package?
+- try hybrid model to lower AIC
+```{r}
+#groupedsurv package
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("qvalue")
+install.packages("groupedSurv")
+library(groupedSurv)
+```
+https://www.bioconductor.org/packages/release/bioc/html/qvalue.html
+
+```{r}
+#estimating baseline survival on diff monitoring times
+mod3surv <- alphaEstFam(beetle2$Monitoring_Period, beetle2$Delta)
+mod3surv
+```
+ https://cran.r-project.org/web/packages/groupedSurv/groupedSurv.pdf
+ 
+
+
+GLM reduced mod2 (Hybrid)
+- look at outputs... what looks time dependent and what doesn't
+
+```{r}
+summary(link_red1final)
+summary(full_final)
+
+#time dependent covariates affect odds less (smaller estimates, so make homogeneous)
+#include time interaction for interaction between treatment and infected covariates
+
+link_hybrid <- glm(event ~ Time + offset(Y_ki) + 
+                     covariate1 + covariate2 + covariate3 + covariate4 + 
+                     (covariate1:Time):(covariate2:Time) + 
+                        (covariate3:Time):(covariate4:Time) +
+                      site + 
+                     covariate1:site + covariate2:site + covariate3:site + covariate4:site,
+    family = "binomial"(link= 'cloglog'), data = link_df)
+summary(link_hybrid)
+```
+
+Reduced Mod2, model selection
+```{r}
+aic_hybrid <- stepAIC(link_hybrid, direction = 'backward')
+```
+```{r}
+#deviance residuals
+#these also same
+dev_residuals4 <- residuals(link_hybrid, type = 'deviance')
+
+plot(link_df$Time, dev_residuals4,
+     type = 'b', pch = 10, 
+     xlab = "Time", ylab = "Deviance Residuals",
+     main = "Deviance Residuals for GLM Model Hybrid")
+```
+
+
+
+Reduced mod 2 no outliers
+```{r}
+#red mod2, no outliers
+link_df_no_outliers2 <- link_df[-outliers2, ]
+
+
+link_hybrid2 <- glm(event ~ Time + offset(Y_ki) + 
+                     covariate1 + covariate2 + covariate3 + covariate4 + 
+                     (covariate1:Time):(covariate2:Time) + 
+                        (covariate3:Time):(covariate4:Time) +
+                      site + 
+                     covariate1:site + covariate2:site + covariate3:site + covariate4:site
+                        ,
+                 family = binomial(link = 'cloglog'), data = link_df_no_outliers2)
+
+summary(link_hybrid2)
+```
+
+```{r}
+aic_hybrid_no_outliers <- stepAIC(link_hybrid2, direction = "backward")
+```
+
+Best model:
+event ~ Time + covariate1 + covariate2 + covariate3 + covariate4 + 
+    site + covariate1:site + covariate3:site + covariate4:site + 
+    Time:covariate1:covariate2 + Time:covariate3:covariate4 + 
+    offset(Y_ki)
+
+AIC = 8445.36
+
+```{r}
+hybrid_final_no_outliers <- glm(event ~ Time + 
+                                  covariate1 + covariate2 + covariate3 + covariate4 + 
+                                  site + 
+                                  covariate1:site + covariate3:site + covariate4:site + 
+                                  Time:covariate1:covariate2 + Time:covariate3:covariate4 + 
+                                  offset(Y_ki),
+                                family = "binomial"(link="cloglog"), data = link_df_no_outliers2)
+```
+
+AIC's
+```{r}
+#base
+link_base$aic
+#full final
+full_final$aic
+#full no outliers
+full_final_no_outliers$aic
+#red mod1 final
+link_red1final$aic
+#red mod1 final no outliers
+link_red1final_no_outliers$aic
+#hybrid final
+link_hybrid$aic
+#hybrid final no outliers
+hybrid_final_no_outliers$aic
+```
+
+Checking COXph assumptions for model (3)
+- proportionality
+- LRT for goodness of fit
+- Check residuals
+
+```{r}
+#I'm doing model without outliers for this visual
+#final model gave best AIC
+
+#deviance residuals
+dev_residuals3 <- residuals(hybrid_final_no_outliers, type = 'deviance')
+
+plot(link_df_no_outliers$Time, dev_residuals3,
+     type = 'b', pch = 10, 
+     xlab = "Time", ylab = "Deviance Residuals",
+     main = "Deviance Residuals for GLM Model 3")
+
+outliers5 <- which(dev_residuals3 > 3 | dev_residuals3 < -3)
+outlier_sites5 <- link_df$site[outliers5]
+print(outlier_sites5)
+#get a table
+site_counts5 <- table(link_df$site[outliers5])
+site_counts5
+```
+- only 2 at site two 
+- i have 118 more outliers in this set
+
+
+```{r}
+#removing more outliers
+link_df_no_outliers2 <- link_df_no_outliers[-outliers5, ]
+
+
+hybrid_final2 <- glm(event ~ Time + offset(Y_ki) + 
+                     covariate1 + covariate2 + covariate3 + covariate4 + 
+                     (covariate1:Time):(covariate2:Time) + 
+                        (covariate3:Time):(covariate4:Time) +
+                      site + 
+                     covariate1:site + covariate2:site + covariate3:site + covariate4:site
+                        ,
+                 family = binomial(link = 'cloglog'), data = link_df_no_outliers2)
+
+summary(hybrid_final2)
+aic_hybrid2 <- stepAIC(hybrid_final2, direction = "backward")
+```
+
+Actual Final Final Hybrid Fit without outliers
+```{r}
+hybrid_final2_no_outliers <- glm(event ~ Time + 
+                                   covariate1 + covariate2 + covariate3 + covariate4 + 
+                                    site + 
+                                  covariate1:site + covariate3:site + 
+                                   Time:covariate1:covariate2 + Time:covariate3:covariate4 + 
+                                   offset(Y_ki),
+                                 family = binomial(link = 'cloglog'), data = link_df_no_outliers2
+)
+summary(hybrid_final2_no_outliers)
+```
+
+
+Model Selection
+AIC's
+```{r}
+#base model, no predictors
+link_base$aic
+#full model, before removing outliers
+full_final$aic
+#full model, after removing outliers
+full_final_no_outliers$aic
+#model 2, before removing outliers
+link_red1final$aic
+#model 2, after removing outliers
+link_red1final_no_outliers$aic
+#hybrid model, before removing outliers
+link_hybrid$aic
+#hybrid model, after removing outliers
+hybrid_final3_no_outliers$aic
+```
+Outlier Justification
+
+```{r}
+library(dplyr)
+outlier_investigation <- beetle2[outliers1, ]
+head(outlier_investigation)
+infections_prev1 <- table(outlier_investigation$BP1_Infected_Prev)
+infections_prev1
+infections_prev2 <- table(outlier_investigation$BP2_Infected_Prev)
+infections_prev2
+events_outliers <- table(outlier_investigation$Delta)
+events_outliers
+#they all have events, but no previous infections to 1 or 2 degree radius
+#this indicates a "random"ish appearance of beetles
+#My research question is more interested in treatment methods, and these outliers didn't even receive treatment bc there were no recorded infections
+```
+```{r}
+outlier_investigation2 <- beetle2[outliers5, ]
+head(outlier_investigation2)
+at_risk <- table(outlier_investigation2$Y_ki)
+at_risk
+#these except for 3 all observed the event already
+```
+
+Model Assumptions:
+```{r}
+dev_residuals6 <- residuals(hybrid_final3_no_outliers, type = 'deviance')
+
+plot(link_df_no_outliers3$Time, dev_residuals6,
+     type = 'b', pch = 10, 
+     xlab = "Time", ylab = "Deviance Residuals",
+     main = "Deviance Residuals for Best Model")
+
+outliersfinal <- which(dev_residuals6 > 3 | dev_residuals6 < -3)
+outlier_sites6 <- link_df$site[outliersfinal]
+print(outlier_sites6)
+#get a table
+site_counts5 <- table(link_df$site[outliersfinal])
+site_counts5
+```
+```{r}
+outlier_investigation3 <- beetle2[outliersfinal, ]
+head(outlier_investigation3)
+at_risk2 <- table(outlier_investigation3$Y_ki)
+at_risk2
+#observed event already
+
+#removing more outliers
+link_df_no_outliers3 <- link_df_no_outliers2[-outliersfinal, ]
+
+
+hybrid_final3 <- glm(event ~ Time + offset(Y_ki) + 
+                     covariate1 + covariate2 + covariate3 + covariate4 + 
+                     (covariate1:Time):(covariate2:Time) + 
+                        (covariate3:Time):(covariate4:Time) +
+                      site + 
+                     covariate1:site + covariate2:site + covariate3:site + covariate4:site
+                        ,
+                 family = binomial(link = 'cloglog'), data = link_df_no_outliers3)
+
+summary(hybrid_final3)
+aic_hybrid2 <- stepAIC(hybrid_final3, direction = "backward")
+```
+```{r}
+hybrid_final3_no_outliers <- glm(event ~ Time + 
+                                   covariate1 + covariate2 + covariate3 + covariate4 + 
+                                    site + 
+                                   covariate1:site + covariate2:site + covariate3:site + 
+                                    covariate1:covariate2 + covariate3:covariate4 + 
+                                  offset(Y_ki),
+                                 family = 'binomial'(link= 'cloglog'), data = link_df_no_outliers3)
+summary(hybrid_final3_no_outliers)
+```
+
+```{r}
+#model assumptions
+dev_residuals7 <- residuals(hybrid_final3_no_outliers, type = 'deviance')
+
+plot(link_df_no_outliers3$Time, dev_residuals7,
+     type = 'b', pch = 10, 
+     xlab = "Time", ylab = "Deviance Residuals",
+     main = "Deviance Residuals for Best Model")
+
+outliersfinal2 <- which(dev_residuals7 > 3 | dev_residuals7 < -3)
+outlier_sites7 <- link_df$site[outliersfinal2]
+print(outlier_sites7)
+#get a table
+site_counts6 <- table(link_df$site[outliersfinal2])
+site_counts6
+#only 25 outliers in this deviance plot
+```
+
+```{r}
+#checking for outliers because of deviance plot
+plot(link_df_no_outliers3$Time, dev_residuals7,
+     type = 'b',
+     xlab = 'time', ylab = 'dev residuals',
+     main = "Mod3: Residuals with Outliers")
+
+points(link_df_no_outliers3$Time[outliersfinal2], dev_residuals7[outliersfinal2], pch = 18, col = 'red')
+
+```
+
+Likelihood Ratio for Hypothesis
+
+Fang, Qixiang, and Rans van de Schoot. "Intro to Discrete-Time Survival Analysis in R." Rans van de Schoot, www.rensvandeschoot.com/tutorials/discrete-time-survival. Accessed 4 Dec. 2023.
+```{r}
+#final model without treatment covariates
+lrt_red1 <- glm(event ~ Time + 
+                                   covariate1 + covariate3 + 
+                                    site + 
+                                   covariate1:site + covariate3:site + 
+                                  offset(Y_ki),
+                                 family = 'binomial'(link= 'cloglog'), data = link_df_no_outliers3)
+# final model with treatment covariates
+lrt_full1 <- glm(event ~ Time + 
+                                   covariate1 + covariate2 + covariate3 + covariate4 + 
+                                    site + 
+                                   covariate1:site + covariate2:site + covariate3:site + 
+                                    Time:covariate1:covariate2 + Time:covariate3:covariate4 + 
+                                  offset(Y_ki),
+                                 family = 'binomial'(link= 'cloglog'), data = link_df_no_outliers3)
+#LRT
+lrt1 <- anova(lrt_red1, lrt_full1, test = "Chisq")
+lrt1
+
+```
+
+Model Interpretation : Best Model
+```{r}
+summary(hybrid_final3_no_outliers)
+```
+
+Interpretations
+----------------
+Coefficients:
+                             Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                 1.262e+02  2.264e+01   5.574 2.49e-08 ***
+Time                       -6.743e-02  1.126e-02  -5.988 2.12e-09 *** 
+covariate1                  3.030e+00  2.870e-01  10.559  < 2e-16 *** infections in prev year do impact current year 1 deg
+covariate2                 -8.683e-02  5.568e-01  -0.156 0.876087     NOT significant... treatment not impacting enough
+covariate3                  1.324e+00  2.211e-01   5.988 2.13e-09 *** infections do impact but less than 1 deg radius
+covariate4                  1.186e+00  1.236e-01   9.600  < 2e-16 *** significant but increase still... same conclusion as ''
+site2                       4.204e+00  3.871e-01  10.861  < 2e-16 *** most significant impact on log odds...least outliers too
+site3                       9.987e-01  4.433e-01   2.253 0.024264 *   3 is next to 2, so evidence for spatial impact
+covariate1:site2           -2.559e+00  2.970e-01  -8.616  < 2e-16 ***
+covariate1:site3           -1.386e+00  3.460e-01  -4.005 6.19e-05 *** 
+covariate1:site4           -7.614e-01  3.959e-01  -1.923 0.054432 .  
+covariate2:site2            1.202e+00  5.364e-01   2.240 0.025075 *  
+covariate2:site3            1.176e+00  5.872e-01   2.003 0.045198 *  
+covariate3:site2           -7.906e-01  2.240e-01  -3.530 0.000416 ***
+Time:covariate1:covariate2 -2.803e-04  4.561e-05  -6.146 7.97e-10 *** as time, num infected and num treated increase,
+Time:covariate3:covariate4 -1.739e-04  1.906e-05  -9.120  < 2e-16 *** the log-odds decrease. this suggests treatment slows
+                                                                      spread of infection, but not fast enough to be sig alone
