@@ -18,4 +18,55 @@ The full Rmarkdown code is documented in this repository, but the summary below 
 - <b>KMSurv</b>
 - <b>ggplot2</b>
 
-<h2>Program walk-through:</h2>
+<h2>Project walk-through:</h2>
+
+### Lin and Zhu (2012)
+
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+
+Models
+
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+
+### Original Analysis, Adri Reuschel (2023)
+
+New Dataset
+
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+
+Data Manipulation
+
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+
+Models
+
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+
+Outliers
+
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+
+Results
+
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+
+References
+
+![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+
+
+
+
+
