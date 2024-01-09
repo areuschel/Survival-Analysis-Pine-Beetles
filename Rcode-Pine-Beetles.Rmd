@@ -12,7 +12,6 @@ knitr::opts_chunk$set(echo = TRUE)
 LOAD PACKAGES
 ```{r}
 library(dplyr)
-# install.packages("dplyr")
 library(survival)
 library(MASS)
 # update.packages(ask = FALSE, dependencies = TRUE)
@@ -22,11 +21,6 @@ DATA Source:
 https://www.sciencedirect.com/science/article/pii/S2352340920301876#appsec2
 
 LOAD DATA
-```{r}
-#NEW DATASET 
-god <- read.csv("/Users/abbyreuschel/Desktop/pls/god.csv")
-```
-
 
 DATA CLEANING
 ```{r}
