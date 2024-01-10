@@ -3,7 +3,7 @@ Bark vs. Bite
 
 <h2>Description</h2>
 
-Hello! I am really proud of this project.
+Hello there! I am really proud of this project...and the witty title. Enjoy!
 
 I was tasked with finding a published article that challenges traditional survival analysis methods and then applying these methods to a new dataset... along with my own original analysis! For this project, I chose "Continuous-Time Proportional Hazards Regression for Ecological Monitoring Data" (2012) by Feng-Chang Lin and Jun Zhu. The reason I chose this paper is because it is a truly innovative use of survival methods in an ecological setting. Want to read more?
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3849820/ 
@@ -73,27 +73,75 @@ Although the dataset didn’t provide separate sites like the bark beetle datase
 
 ### My Models
 
+Model 1:
+
+- time heterogeneous covariates for 6 terms
+
+- interaction terms between time:(infestedPrevYr:treatedPrevYr)
+
+- categorical variable for site
+
+- (NEW!) covariate-site interactions, not in original models from (Lin & Zhu, 2012)
+
+🔎 AIC = 12965 🔎
+
+
 ![Employee data](/311-Mod11.jpg?raw=true "MOD11")
+
+Model 2:
+
+- time-homogeneous regression coefficients
+
+- this model does not consider time dependencies for any covariates or covariate interactions
+
+🔎 AIC = = 12964 🔎
 
 ![Employee data](/311-Mod12.jpg?raw=true "MOD12")
 
+Model 3:
+
+- keeps the time independent covariates for both infested and treatment variables
+
+- also considers the time dependent interaction between the infested and treatment variables
+
+🔎 AIC = 12963.9 🔎
+
 ![Employee data](/311-Mod13.jpg?raw=true "MOD13")
 
-Outliers
 
-![Employee data](/repository/assets/employee.png?raw=true "OUTLIERS")
+### Outliers
 
-![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+📉 Due to the poor performance of all three models, I continued to explore the outliers in the model to determine what characteristics of these observations were prohibiting my assumptions from being met. I created a few tables in R to see if I could identify any patterns within the outliers. 
 
-Results
+📌 I found that all observations shown to be outliers through the deviance residuals experienced the event. I then looked at my variables of interest, namely the infested and treatment variables from previous monitoring periods. This revealed that for all observations but one, there were no recorded infested or treated cells in the year prior to the cell experiencing the event. 
 
-![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+This likely means that the beetles spread faster than usual or that they were incorrectly missed in observation from the previous year. Due to these findings and the focus of my analysis, I decided to remove 407 observations from my dataset.
 
-![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+My primary goal was to determine if treatment methods are effective in preventing the spread of mountain pine beetles and since none of these observations received treatment prior to experiencing the event, they were not crucial to my model.
 
-References
+![Employee data](/311-Outliers.jpg?raw=true "OUTLIERS")
 
-![Employee data](/repository/assets/employee.png?raw=true "Employee Data title")
+
+### Results
+
+The snapshot below shows the AIC criterion improvement throughout all of my models.
+Each model was fitted with and without outliers for comparison.
+
+![Employee data](/311-Results.jpg?raw=true "Employee Data title")
+
+
+site 2 most influential
+interactions with site 2
+
+![Employee data](/311-Results-O.jpg?raw=true "Employee Data title")
+
+### Conclusion
+
+![Employee data](/311-Conclusion.jpg?raw=true "Employee Data title")
+
+### References
+
+![Employee data](/311-Reference.jpg?raw=true "Employee Data title")
 
 
 
