@@ -95,7 +95,7 @@ Model 2:
 
 - this model does not consider time dependencies for any covariates or covariate interactions
 
-🔎 AIC = = 12964 🔎
+🔎 AIC = 12964 🔎
 
 ![Employee data](/311-Mod12.jpg?raw=true "MOD12")
 
