@@ -3,12 +3,14 @@ Bark vs. Bite
 
 <h2>Description</h2>
 
-Hello there! I am really proud of this project. It is a little theory-heavy, so if you aren't super familiar with survival analysis methods I recommend reading the article linked below. The main concept of this project is the connection between Cox Proportional Hazards regression (semi-parametric method) and generalized linear model (glm) methods through a link function. Enjoy!
+The main concept explored in this project is the connection between Cox Proportional Hazards regression (semi-parametric method) and generalized linear model (glm) methods through a link function. Enjoy!
 
-For this project, I was tasked with finding a published article that challenges traditional survival analysis methods and then applying these methods to a new dataset... along with my own original analysis! For this project, I chose "Continuous-Time Proportional Hazards Regression for Ecological Monitoring Data" (2012) by Feng-Chang Lin and Jun Zhu. The reason I chose this paper is because it is a truly innovative use of survival methods in an ecological setting. Want to read more?
+I based my models off of a paper written by Feng-Chang Lin and Jun Zhu. Below is the link to read the publication introducing two models that I attempt to use with new data. I also introduce a 3rd model in addition to the two mentioned in (Feng-Chang, Zhu (2012)).
+
+"Continuous-Time Proportional Hazards Regression for Ecological Monitoring Data" (2012) by Feng-Chang Lin and Jun Zhu.
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3849820/ 
 
-One of my personal interests is environmental sustainability, which motivated the ecological focus of this project. Both the original paper and my own analysis highlight the importance and power of using data to make well-informed decisions for the benefit of certain environments and the people who live among it. See "Project walk-through" below to read about my findings!
+I enjoy studying various environmental science topics which motivated the ecological focus of this project. Both the original paper and my own analysis highlight the importance and power of using data to make well-informed decisions for the benefit of certain environments and the people who live among it. See "Project walk-through" below to read about my findings!
 
 The full Rmarkdown code is documented in this repository, but the summary below is recommended for an overview.
 
