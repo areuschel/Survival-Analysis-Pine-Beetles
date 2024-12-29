@@ -22,7 +22,7 @@ The full Rmarkdown code is documented in this repository, but the summary below 
 
 <h2>Project walk-through:</h2>
 
-![2012 Data](/311-Presentation.jpg?raw=true "LinZhu")
+![2012 Data](/Photos/311-Presentation.jpg?raw=true "LinZhu")
 
 ### Models, (Lin & Zhu, 2012)
 
@@ -31,9 +31,9 @@ The purpose of this paper is to utilize time to event data techniques not common
 The following 3 models all represent Cox Proportional Hazards regression; their differences are described in the individual slides!
 
 
-![Mod1](/311-Mod1.jpg?raw=true "Mod")
-![Mod2 data](/311-Mod2.jpg?raw=true "Mod")
-![Mod3 data](/311-Mod3.jpg?raw=true "Mod")
+![Mod1](/Photos/311-Mod1.jpg?raw=true "Mod")
+![Mod2 data](/Photos/311-Mod2.jpg?raw=true "Mod")
+![Mod3 data](/Photos/311-Mod3.jpg?raw=true "Mod")
 
 
 
@@ -42,7 +42,7 @@ The following 3 models all represent Cox Proportional Hazards regression; their 
 ### Original Analysis, A. Reuschel (2023)
 
 
-![Employee data](/311-NewData.jpg?raw=true "New")
+![Employee data](/Photos/311-NewData.jpg?raw=true "New")
 
 Finding a new dataset to apply the methods of Lin & Zhu's paper to was very challenging. The requirements of both site and monitoring period variation made the selection process very tenuous. Despite this challenge, I was able to find a new dataset with nearly identical goals and measurements to the original bark beetle dataset. The data follow measurements of mountain pine beetle infestations in the Cypress Hills located in the Saskatchewan region of Canada after an outbreak of these beetles in 2006.
 
@@ -53,7 +53,7 @@ About the data:
 
 - event of interest = "MPB" (Mountain Pine Beetle)
 
-![Employee data](/311-NewData2.jpg?raw=true "KM")
+![Employee data](/Photos/311-NewData2.jpg?raw=true "KM")
 
 
 ### Data Manipulation
@@ -62,11 +62,11 @@ About the data:
 🎯 My first goal was to create distinct sites to account for spatial dependence in my models. 
 Although the dataset didn’t provide separate sites like the bark beetle dataset, the latitude and longitude coordinates corresponding to the centroid of the tree cells were given. I performed a k-means clustering on my data to assign sites to each cell group. 
 
-![Employee data](/311-Kmeans.jpg?raw=true "KM")
+![Employee data](/Plots/311-Kmeans.jpg?raw=true "KM")
 
 🎯 Next, I created an indicator function to represent whether the tree cell was "at risk" during the kth monitoring period.
 
-![Employee data](/311-Indicator.jpg?raw=true "IND")
+![Employee data](/Plots/311-Indicator.jpg?raw=true "IND")
 
 ### Research Question
 
@@ -89,7 +89,7 @@ Model 1:
 🔎 AIC = 12965 🔎
 
 
-![Employee data](/311-Mod11.jpg?raw=true "MOD11")
+![Employee data](/Photos/311-Mod11.jpg?raw=true "MOD11")
 
 Model 2:
 
@@ -99,7 +99,7 @@ Model 2:
 
 🔎 AIC = 12964 🔎
 
-![Employee data](/311-Mod12.jpg?raw=true "MOD12")
+![Employee data](/Photos/311-Mod12.jpg?raw=true "MOD12")
 
 Model 3:
 
@@ -109,7 +109,7 @@ Model 3:
 
 🔎 AIC = 12963.9 🔎
 
-![Employee data](/311-Mod13.jpg?raw=true "MOD13")
+![Employee data](/Photos/311-Mod13.jpg?raw=true "MOD13")
 
 
 ### Outliers
@@ -122,7 +122,7 @@ Model 3:
 
 📌 My primary goal was to determine if treatment methods are effective in preventing the spread of mountain pine beetles and since none of these observations received treatment prior to experiencing the event, they were not crucial to my model.
 
-![Employee data](/311-Outliers.jpg?raw=true "OUTLIERS")
+![Employee data](/Plots/311-Outliers.jpg?raw=true "OUTLIERS")
 
 
 ### Results
@@ -130,7 +130,7 @@ Model 3:
 The snapshot below shows the AIC criterion improvement throughout all of my models.
 Each model was fitted with and without outliers for comparison.
 
-![Employee data](/311-Results.jpg?raw=true "Employee Data title")
+![Employee data](/Plots/311-Results.jpg?raw=true "Employee Data title")
 
 🔹 Output Interpretation, Site 2
 - Site 2 is most impactful variable on the log hazards ratio, this time estimating the hazard for a cell group at this site to be 4.2 times higher than a cell group in site 1
@@ -143,7 +143,7 @@ Each model was fitted with and without outliers for comparison.
 - This provides strong evidence for spatial dependencies
 
 
-![Employee data](/311-Results-O.jpg?raw=true "Employee Data title")
+![Employee data](/Plots/311-Results-O.jpg?raw=true "Employee Data title")
 
 ### Conclusion
 
@@ -164,11 +164,11 @@ Evidence FOR treatment efficacy:
 
 - Between the two, the interaction with a 1-cell radius has a lower estimate, reinforcing the spatial dependency component of this model.
 
-![Employee data](/311-Conclusion.jpg?raw=true "Employee Data title")
+![Employee data](/Photos/311-Conclusion.jpg?raw=true "Employee Data title")
 
 ### References
 
-![Employee data](/311-Reference.jpg?raw=true "Employee Data title")
+![Employee data](/Photos/311-Reference.jpg?raw=true "Employee Data title")
 
 
 
