@@ -1,5 +1,5 @@
 # Survival-Analysis-Pine-Beetles
-Bark vs. Bite
+## Bark vs. Bite
 
 <h2>Description</h2>
 
