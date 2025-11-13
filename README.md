@@ -26,12 +26,9 @@ The full Rmarkdown code is documented in this repository, but the summary below 
 
 The purpose of this paper is to utilize time to event data techniques not commonly found in environmental research in order to study the relationship between the colonization of red pines by two different beetles. This research attempts to answer if the colonization of red pines by turpentine beetles, that aren’t inherently damaging to trees, predispose a tree to colonization of another beetle, Ips ssp., that are known to kill red pines.
 
-The following 3 models all represent Cox Proportional Hazards regression; their differences are described in the individual slides!
+The following 3 models all represent Cox Proportional Hazards regression; their differences are described below.
 
-
-![Mod1](/Photos/311-Mod1.jpg?raw=true "Mod")
-![Mod2 data](/Photos/311-Mod2.jpg?raw=true "Mod")
-![Mod3 data](/Photos/311-Mod3.jpg?raw=true "Mod")
+<img src="/Photos/311-Mod1.jpg" width="480"> <img src="/Photos/311-Mod2.jpg" width="480"> <img src="/Photos/311-Mod3.jpg" width="480">
 
 
 --- 
@@ -40,7 +37,7 @@ The following 3 models all represent Cox Proportional Hazards regression; their 
 ### Original Analysis, A. Reuschel (2023)
 
 
-![Employee data](/Photos/311-NewData.jpg?raw=true "New")
+<img src="/Photos/311-NewData.jpg" width="620"> 
 
 The data follow measurements of mountain pine beetle infestations in the Cypress Hills located in the Saskatchewan region of Canada after an outbreak of these beetles in 2006.
 
@@ -51,7 +48,7 @@ About the data:
 
 - event of interest = "MPB" (Mountain Pine Beetle)
 
-![Employee data](/Photos/311-NewData2.jpg?raw=true "KM")
+<img src="/Photos/311-NewData2.jpg" width="620"> 
 
 
 ### Data Manipulation
@@ -60,76 +57,64 @@ About the data:
 🎯 My first goal was to create distinct sites to account for spatial dependence in my models. 
 Although the dataset didn’t provide separate sites like the bark beetle dataset, the latitude and longitude coordinates corresponding to the centroid of the tree cells were given. I performed a k-means clustering on my data to assign sites to each cell group. 
 
-![Employee data](/Plots/311-Kmeans.jpg?raw=true "KM")
-
 🎯 Next, I created an indicator function to represent whether the tree cell was "at risk" during the kth monitoring period.
 
-![Employee data](/Plots/311-Indicator.jpg?raw=true "IND")
+
+<img src="/Plots/311-Kmeans.jpg" width="620">
+
+--- 
 
 ### Research Question
 
-🔬 Are the control methods employed on areas of pine beetle infested trees effective in preventing the spread of the pine beetles to a 1 or 2 degree radius?
+**Are the control methods employed on areas of pine beetle infested trees effective in preventing the spread of the pine beetles to a 1 or 2 degree radius?**
 
 
 
 ### My Models
 
-Model 1:
+| Model 1 | Model 2 | Model 3 |
+|---|---|---|
+|time **heterogeneous** covariates, covariate-site interactions (NEW! not in models from (Lin & Zhu, 2012)| time **homogeneous** covariates, no time dependencies for any covariates | considers time dependent interaction between infested and treatment variables |
+| AIC = 12965 | AIC = 12964 | AIC = 12963.9 |
 
-- time heterogeneous covariates for 6 terms
+<img src="/Photos/311-Mod11.jpg" width="640"> 
+<img src="/Photos/311-Mod12.jpg" width="640">
+<img src="/Photos/311-Mod13.jpg" width="640">
 
-- interaction terms between time:(infestedPrevYr:treatedPrevYr)
+---
 
-- categorical variable for site
+## Outliers
 
-- (NEW!) covariate-site interactions, not in original models from (Lin & Zhu, 2012)
+Due to the poor performance of all three models, I continued to explore the outliers in the model to determine what characteristics of these observations were prohibiting my assumptions from being met. I created a few tables in R to see if I could identify any patterns within the outliers. 
 
-🔎 AIC = 12965 🔎
+  - I found that all observations shown to be outliers through the deviance residuals experienced the event.
+  - I then looked at my variables of interest, namely the infested and treatment variables from previous monitoring periods.
+  - This revealed that for all observations but one, there were no recorded infested or treated cells in the year prior to the cell experiencing the event. 
 
+**What happened?** 
 
-![Employee data](/Photos/311-Mod11.jpg?raw=true "MOD11")
+I think this could mean that the beetles spread faster than usual or that they were incorrectly missed in observation from the previous year.
 
-Model 2:
+**Now what?** 
 
-- time-homogeneous regression coefficients
+My primary goal was to determine if treatment methods are effective in preventing the spread of mountain pine beetles and since none of these observations received treatment prior to experiencing the event, they were not crucial to my model. Thus, I removed 407 observations from the dataset. 
 
-- this model does not consider time dependencies for any covariates or covariate interactions
-
-🔎 AIC = 12964 🔎
-
-![Employee data](/Photos/311-Mod12.jpg?raw=true "MOD12")
-
-Model 3:
-
-- keeps the time independent covariates for both infested and treatment variables
-
-- also considers the time dependent interaction between the infested and treatment variables
-
-🔎 AIC = 12963.9 🔎
-
-![Employee data](/Photos/311-Mod13.jpg?raw=true "MOD13")
-
-
-### Outliers
-
-📉 Due to the poor performance of all three models, I continued to explore the outliers in the model to determine what characteristics of these observations were prohibiting my assumptions from being met. I created a few tables in R to see if I could identify any patterns within the outliers. 
-
-📌 I found that all observations shown to be outliers through the deviance residuals experienced the event. I then looked at my variables of interest, namely the infested and treatment variables from previous monitoring periods. This revealed that for all observations but one, there were no recorded infested or treated cells in the year prior to the cell experiencing the event. 
-
-📌 This likely means that the beetles spread faster than usual or that they were incorrectly missed in observation from the previous year. Due to these findings and the focus of my analysis, I decided to remove 407 observations from my dataset.
-
-📌 My primary goal was to determine if treatment methods are effective in preventing the spread of mountain pine beetles and since none of these observations received treatment prior to experiencing the event, they were not crucial to my model.
-
-![Employee data](/Plots/311-Outliers.jpg?raw=true "OUTLIERS")
+<img src="/Plots/311-Outliers.jpg" width="640">
 
 --- 
 
 ### Results
 
-The snapshot below shows the AIC criterion improvement throughout all of my models.
+The table below shows the AIC criterion improvement throughout all of my models.
 Each model was fitted with and without outliers for comparison.
 
-![Employee data](/Plots/311-Results.jpg?raw=true "Employee Data title")
+In removing **less than 1%** of the observations, we see large improvement in the AIC values for each model. Most significantly in the final hybrid model. 
+
+| Model| AIC Before Removing Outliers | AIC After Removing ourliers |
+|---|---|---|
+| 1 | 12965 | 8448.2 |
+| 2 | 12964 | 8446.1 |
+| 3 | 12963.9 | **6619.3** |
 
 **Output Interpretation, Site 2**
 - Site 2 is most impactful variable on the log hazards ratio, this time estimating the hazard for a cell group at this site to be 4.2 times higher than a cell group in site 1
@@ -141,8 +126,7 @@ Each model was fitted with and without outliers for comparison.
 
 - This provides strong evidence for spatial dependencies
 
-
-![Employee data](/Plots/311-Results-O.jpg?raw=true "Employee Data title")
+<img src="/Plots/311-Results-0.jpg" width="700">
 
 ### Conclusion
 
