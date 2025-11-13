@@ -126,7 +126,7 @@ In removing **less than 1%** of the observations, we see large improvement in th
 
 - This provides strong evidence for spatial dependencies
 
-<img src="/Plots/311-Results-0.jpg" width="700">
+<img src="/Plots/311-Results-O.jpg" width="700">
 
 ### Conclusion
 
