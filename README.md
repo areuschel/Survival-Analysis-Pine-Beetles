@@ -7,8 +7,8 @@ The main concept explored in this project is the connection between Cox Proporti
 
 I based my models off of a paper written by Feng-Chang Lin and Jun Zhu. Below is the link to read the publication introducing two models that I attempt to use with new data. I also introduce a 3rd model in addition to the two mentioned in (Feng-Chang, Zhu (2012)).
 
-"Continuous-Time Proportional Hazards Regression for Ecological Monitoring Data" (2012) by Feng-Chang Lin and Jun Zhu.
-https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3849820/ 
+"Continuous-Time Proportional Hazards Regression for Ecological Monitoring Data" (2012) by [Feng-Chang Lin and Jun Zhu](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3849820/ 
+).
 
 I enjoy studying various environmental science topics which motivated the ecological focus of this project. Both the original paper and my own analysis highlight the importance and power of using data to make well-informed decisions for the benefit of certain environments and the people who live among it. See "Project walk-through" below to read about my findings!
 
